@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Paper PDF Renamer</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="popup-body">
+    <main class="popup-shell">
+      <header class="page-header">
+        <h1>Paper PDF Renamer</h1>
+        <p id="siteHint">Ready for arXiv and OpenReview PDFs.</p>
+      </header>
+
+      <label class="switch-row">
+        <span>Enabled</span>
+        <input id="enabled" type="checkbox">
+      </label>
+
+      <section>
+        <h2>Recent activity</h2>
+        <div id="history" class="history-list"></div>
+      </section>
+
+      <footer class="button-row">
+        <button id="openBatch" class="secondary">Old PDFs</button>
+        <button id="openOptions" class="primary">Settings</button>
+      </footer>
+    </main>
+
+    <script src="shared-utils.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

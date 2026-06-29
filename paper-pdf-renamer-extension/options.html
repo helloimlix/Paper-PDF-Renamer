@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Paper PDF Renamer Settings</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="page-header">
+        <h1>Settings</h1>
+        <p>Control how paper downloads are renamed.</p>
+      </header>
+
+      <section class="panel field-stack">
+        <label class="check-row">
+          <input id="enabled" type="checkbox">
+          <span>Enable PDF renaming</span>
+        </label>
+
+        <label class="check-row">
+          <input id="confirmBeforeRename" type="checkbox">
+          <span>Confirm before saving</span>
+        </label>
+
+        <label class="check-row">
+          <input id="allowNetwork" type="checkbox">
+          <span>Allow arXiv and OpenReview title lookup</span>
+        </label>
+
+        <label class="check-row">
+          <input id="overwriteSameName" type="checkbox">
+          <span>Default to overwriting same-name files</span>
+        </label>
+
+        <label>
+          <span>Maximum filename length</span>
+          <input id="maxFilenameLength" type="number" min="32" max="220" step="1">
+        </label>
+      </section>
+
+      <section class="panel field-stack">
+        <h2>Supported sites</h2>
+        <label class="check-row">
+          <input id="arxiv" type="checkbox">
+          <span>arXiv</span>
+        </label>
+        <label class="check-row">
+          <input id="openreview" type="checkbox">
+          <span>OpenReview</span>
+        </label>
+      </section>
+
+      <p id="status" class="status-line"></p>
+
+      <footer class="button-row">
+        <button id="reset" class="secondary">Reset</button>
+        <button id="save" class="primary">Save</button>
+      </footer>
+    </main>
+
+    <script src="shared-utils.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

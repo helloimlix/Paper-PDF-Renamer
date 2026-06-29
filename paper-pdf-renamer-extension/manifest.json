@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Paper PDF Renamer",
+  "description": "Rename downloaded paper PDFs using their titles.",
+  "version": "0.1.0",
+  "permissions": [
+    "downloads",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://arxiv.org/*",
+    "https://export.arxiv.org/*",
+    "https://openreview.net/*",
+    "https://api.openreview.net/*",
+    "https://api2.openreview.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Paper PDF Renamer",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html"
+}

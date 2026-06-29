@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rename Old PDFs</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="wide-shell">
+      <header class="page-header split-header">
+        <div>
+          <h1>Old PDF renamer</h1>
+          <p>Select a folder, scan PDF names, then rename recognized papers.</p>
+        </div>
+        <button id="chooseFolder" class="primary">Choose folder</button>
+      </header>
+
+      <section class="toolbar">
+        <label class="check-row">
+          <input id="overwriteExisting" type="checkbox">
+          <span>Overwrite existing same-name files</span>
+        </label>
+        <button id="renameSelected" class="secondary">Rename selected</button>
+      </section>
+
+      <p id="status" class="status-line"></p>
+
+      <section class="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th>Current file</th>
+              <th>Detected title</th>
+              <th>New file</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr>
+              <td colspan="5" class="empty-cell">No folder selected.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <script src="shared-utils.js"></script>
+    <script src="batch.js"></script>
+  </body>
+</html>
