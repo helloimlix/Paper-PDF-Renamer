@@ -35,6 +35,13 @@
         </label>
 
         <label>
+          <span>Filename template</span>
+          <input id="filenameTemplate" type="text" placeholder="{title}">
+        </label>
+
+        <p class="template-help">Available tokens: {title}, {date}, {year}, {authors}, {firstAuthor}, {source}, {sourceId}</p>
+
+        <label>
           <span>Maximum filename length</span>
           <input id="maxFilenameLength" type="number" min="32" max="220" step="1">
         </label>

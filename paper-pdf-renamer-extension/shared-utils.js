@@ -4,6 +4,7 @@
     confirmBeforeRename: true,
     allowNetwork: true,
     overwriteSameName: false,
+    filenameTemplate: "{title}",
     maxFilenameLength: 180,
     enabledSites: {
       arxiv: true,
@@ -75,7 +76,7 @@
     let filename = normalizeWhitespace(value);
     filename = filename.replace(/[\/\\:*?"<>|]/g, " - ");
     filename = filename.replace(/[\u0000-\u001f\u007f]/g, "");
-    filename = filename.replace(/\s*-\s*/g, " - ");
+    filename = filename.replace(/\s+-\s+/g, " - ");
     filename = filename.replace(/\s+/g, " ");
     filename = filename.replace(/(?:\s+-\s*)+$/g, "");
     filename = filename.replace(/^(?:\s*-\s+)+/g, "");
@@ -92,6 +93,82 @@
   function ensurePdfExtension(value, settings) {
     const withoutExtension = String(value || "").replace(/\.pdf$/i, "");
     return `${sanitizeFilename(withoutExtension, { maxLength: settings && settings.maxFilenameLength })}.pdf`;
+  }
+
+  function renderFilenameTemplate(template, metadata, settings) {
+    const paper = normalizePaperMetadata(metadata);
+    const fallbackTemplate = DEFAULT_SETTINGS.filenameTemplate;
+    const rawTemplate = normalizeWhitespace(template || fallbackTemplate) || fallbackTemplate;
+    const values = {
+      title: paper.title,
+      date: paper.date,
+      year: paper.year,
+      authors: paper.authors,
+      firstAuthor: paper.firstAuthor,
+      source: paper.source,
+      sourceId: paper.sourceId
+    };
+
+    const rendered = rawTemplate.replace(/\{([a-zA-Z]+)\}/g, (match, key) => {
+      return Object.prototype.hasOwnProperty.call(values, key) ? values[key] || "" : match;
+    });
+
+    const filenameStem = normalizeWhitespace(rendered) || paper.title || "paper";
+    return ensurePdfExtension(filenameStem, settings);
+  }
+
+  function normalizePaperMetadata(metadata) {
+    const incoming = metadata || {};
+    const authors = normalizeAuthors(incoming.authors);
+    const firstAuthor = normalizeTitle(incoming.firstAuthor) || getFirstAuthor(authors);
+    const date = normalizeDate(incoming.date || incoming.published || incoming.publicationDate);
+    const year = normalizeYear(incoming.year || date);
+
+    return {
+      title: normalizeTitle(incoming.title),
+      authors,
+      firstAuthor,
+      date,
+      year,
+      source: normalizeWhitespace(incoming.source),
+      sourceId: normalizeWhitespace(incoming.sourceId || incoming.paperId)
+    };
+  }
+
+  function normalizeAuthors(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => normalizeWhitespace(item)).filter(Boolean).join(", ");
+    }
+    return normalizeWhitespace(value);
+  }
+
+  function getFirstAuthor(authors) {
+    return normalizeWhitespace(String(authors || "").split(/,| and /i)[0]);
+  }
+
+  function normalizeDate(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      const milliseconds = value > 100000000000 ? value : value * 1000;
+      return new Date(milliseconds).toISOString().slice(0, 10);
+    }
+
+    const text = normalizeWhitespace(value);
+    if (/^\d{10,13}$/.test(text)) {
+      const numeric = Number(text);
+      const milliseconds = numeric > 100000000000 ? numeric : numeric * 1000;
+      return new Date(milliseconds).toISOString().slice(0, 10);
+    }
+
+    const match = text.match(/(\d{4})(?:[-\/](\d{2})(?:[-\/](\d{2}))?)?/);
+    if (!match) {
+      return "";
+    }
+    return [match[1], match[2], match[3]].filter(Boolean).join("-");
+  }
+
+  function normalizeYear(value) {
+    const match = String(value || "").match(/\d{4}/);
+    return match ? match[0] : "";
   }
 
   function getBaseFilename(value) {
@@ -202,17 +279,25 @@
   }
 
   async function fetchArxivTitle(arxivId) {
+    const metadata = await fetchArxivMetadata(arxivId);
+    return metadata.title;
+  }
+
+  async function fetchArxivMetadata(arxivId) {
     if (!arxivId) {
-      return "";
+      return normalizePaperMetadata({});
     }
 
     const apiUrl = `https://export.arxiv.org/api/query?id_list=${encodeURIComponent(arxivId)}`;
     try {
       const xml = await fetchText(apiUrl, 8000);
-      const entryMatch = xml.match(/<entry\b[\s\S]*?<title>([\s\S]*?)<\/title>[\s\S]*?<\/entry>/i);
-      const title = normalizeTitle(entryMatch && entryMatch[1]);
-      if (title) {
-        return title;
+      const metadata = extractArxivMetadataFromXml(xml);
+      if (metadata.title) {
+        return normalizePaperMetadata({
+          ...metadata,
+          source: "arxiv",
+          sourceId: arxivId
+        });
       }
     } catch (error) {
       // Fall through to the HTML page.
@@ -220,10 +305,31 @@
 
     try {
       const html = await fetchText(`https://arxiv.org/abs/${encodeURIComponent(arxivId)}`, 8000);
-      return extractTitleFromHtml(html);
+      return normalizePaperMetadata({
+        ...extractMetadataFromHtml(html),
+        source: "arxiv",
+        sourceId: arxivId
+      });
     } catch (error) {
-      return "";
+      return normalizePaperMetadata({ source: "arxiv", sourceId: arxivId });
     }
+  }
+
+  function extractArxivMetadataFromXml(xml) {
+    const entryMatch = String(xml || "").match(/<entry\b[\s\S]*?<\/entry>/i);
+    const entry = entryMatch ? entryMatch[0] : "";
+    const authorMatches = [...entry.matchAll(/<author>\s*<name>([\s\S]*?)<\/name>\s*<\/author>/gi)];
+    return {
+      title: normalizeTitle(readXmlTag(entry, "title")),
+      authors: authorMatches.map((match) => decodeEntities(match[1])).map(normalizeWhitespace).filter(Boolean),
+      date: normalizeDate(readXmlTag(entry, "published") || readXmlTag(entry, "updated"))
+    };
+  }
+
+  function readXmlTag(xml, tagName) {
+    const pattern = new RegExp(`<${tagName}>([\\s\\S]*?)<\/${tagName}>`, "i");
+    const match = String(xml || "").match(pattern);
+    return match ? decodeEntities(match[1]) : "";
   }
 
   function readOpenReviewTitleFromNote(note) {
@@ -243,8 +349,13 @@
   }
 
   async function fetchOpenReviewTitle(openReviewId) {
+    const metadata = await fetchOpenReviewMetadata(openReviewId);
+    return metadata.title;
+  }
+
+  async function fetchOpenReviewMetadata(openReviewId) {
     if (!openReviewId) {
-      return "";
+      return normalizePaperMetadata({});
     }
 
     const urls = [
@@ -257,9 +368,13 @@
         const json = await fetchJson(url, 8000);
         const notes = Array.isArray(json.notes) ? json.notes : [];
         for (const note of notes) {
-          const title = readOpenReviewTitleFromNote(note);
-          if (title) {
-            return title;
+          const metadata = readOpenReviewMetadataFromNote(note);
+          if (metadata.title) {
+            return normalizePaperMetadata({
+              ...metadata,
+              source: "openreview",
+              sourceId: openReviewId
+            });
           }
         }
       } catch (error) {
@@ -269,13 +384,40 @@
 
     try {
       const html = await fetchText(`https://openreview.net/forum?id=${encodeURIComponent(openReviewId)}`, 8000);
-      return extractTitleFromHtml(html);
+      return normalizePaperMetadata({
+        ...extractMetadataFromHtml(html),
+        source: "openreview",
+        sourceId: openReviewId
+      });
     } catch (error) {
-      return "";
+      return normalizePaperMetadata({ source: "openreview", sourceId: openReviewId });
     }
   }
 
+  function readOpenReviewMetadataFromNote(note) {
+    const content = note && note.content;
+    const readValue = (value) => {
+      if (Array.isArray(value)) {
+        return value.map(readValue).filter(Boolean);
+      }
+      if (value && typeof value.value !== "undefined") {
+        return readValue(value.value);
+      }
+      return typeof value === "string" ? value : "";
+    };
+
+    return {
+      title: normalizeTitle(readValue(content && content.title)),
+      authors: readValue(content && content.authors),
+      date: normalizeDate(readValue(content && (content.date || content.publication_date || content.venueid)) || note.pdate || note.cdate)
+    };
+  }
+
   function extractTitleFromHtml(html) {
+    return extractMetadataFromHtml(html).title;
+  }
+
+  function extractMetadataFromHtml(html) {
     const text = String(html || "");
     const selectors = [
       /<meta\b[^>]*(?:name|property)=["']citation_title["'][^>]*content=["']([^"']+)["'][^>]*>/i,
@@ -287,14 +429,43 @@
       /<title\b[^>]*>([\s\S]*?)<\/title>/i
     ];
 
+    let title = "";
     for (const pattern of selectors) {
       const match = text.match(pattern);
-      const title = normalizeTitle(match && match[1]);
+      title = normalizeTitle(match && match[1]);
       if (title) {
-        return title.replace(/\s*\|\s*OpenReview\s*$/i, "").replace(/\s*-\s*arXiv.*$/i, "").trim();
+        title = title.replace(/\s*\|\s*OpenReview\s*$/i, "").replace(/\s*-\s*arXiv.*$/i, "").trim();
+        break;
       }
     }
-    return "";
+
+    return normalizePaperMetadata({
+      title,
+      authors: readHtmlMetaValues(text, "citation_author"),
+      date: readHtmlMeta(text, "citation_publication_date") || readHtmlMeta(text, "citation_date")
+    });
+  }
+
+  function readHtmlMeta(html, name) {
+    return readHtmlMetaValues(html, name)[0] || "";
+  }
+
+  function readHtmlMetaValues(html, name) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const patterns = [
+      new RegExp(`<meta\\b[^>]*(?:name|property)=["']${escaped}["'][^>]*content=["']([^"']+)["'][^>]*>`, "gi"),
+      new RegExp(`<meta\\b[^>]*content=["']([^"']+)["'][^>]*(?:name|property)=["']${escaped}["'][^>]*>`, "gi")
+    ];
+    const values = [];
+    for (const pattern of patterns) {
+      for (const match of String(html || "").matchAll(pattern)) {
+        const value = normalizeWhitespace(decodeEntities(match[1]));
+        if (value) {
+          values.push(value);
+        }
+      }
+    }
+    return values;
   }
 
   globalThis.PaperRenamerUtils = {
@@ -304,13 +475,18 @@
     normalizeTitle,
     sanitizeFilename,
     ensurePdfExtension,
+    renderFilenameTemplate,
+    normalizePaperMetadata,
     getBaseFilename,
     isLikelyPdf,
     extractArxivId,
     extractOpenReviewId,
     fetchArxivTitle,
+    fetchArxivMetadata,
     fetchOpenReviewTitle,
+    fetchOpenReviewMetadata,
     extractTitleFromHtml,
+    extractMetadataFromHtml,
     withTimeout
   };
 })();

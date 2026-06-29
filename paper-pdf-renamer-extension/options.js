@@ -3,6 +3,7 @@ const fields = {
   confirmBeforeRename: document.getElementById("confirmBeforeRename"),
   allowNetwork: document.getElementById("allowNetwork"),
   overwriteSameName: document.getElementById("overwriteSameName"),
+  filenameTemplate: document.getElementById("filenameTemplate"),
   maxFilenameLength: document.getElementById("maxFilenameLength"),
   arxiv: document.getElementById("arxiv"),
   openreview: document.getElementById("openreview")
@@ -37,6 +38,7 @@ function render(settings) {
   fields.confirmBeforeRename.checked = settings.confirmBeforeRename;
   fields.allowNetwork.checked = settings.allowNetwork;
   fields.overwriteSameName.checked = settings.overwriteSameName;
+  fields.filenameTemplate.value = settings.filenameTemplate;
   fields.maxFilenameLength.value = settings.maxFilenameLength;
   fields.arxiv.checked = settings.enabledSites.arxiv;
   fields.openreview.checked = settings.enabledSites.openreview;
@@ -48,6 +50,7 @@ function readForm() {
     confirmBeforeRename: fields.confirmBeforeRename.checked,
     allowNetwork: fields.allowNetwork.checked,
     overwriteSameName: fields.overwriteSameName.checked,
+    filenameTemplate: fields.filenameTemplate.value.trim() || "{title}",
     maxFilenameLength: Number(fields.maxFilenameLength.value) || 180,
     enabledSites: {
       arxiv: fields.arxiv.checked,

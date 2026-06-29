@@ -26,7 +26,7 @@ Attention Is All You Need.pdf
 - Detects paper titles from public paper IDs and site APIs.
 - Shows a confirmation window before saving the renamed PDF.
 - Allows editing the suggested filename before download.
-- Saves files as `{paper title}.pdf`.
+- Supports custom filename templates such as `{title}`, `{year} - {title}`, or `{firstAuthor} - {date} - {title}`.
 - Offers settings for enabling/disabling renaming, network lookup, supported sites, and overwrite behavior.
 - Includes a local old-PDF renamer for user-selected folders.
 
@@ -56,7 +56,7 @@ This project is currently intended to be loaded as an unpacked Chrome extension.
 
 ### Rename New Downloads
 
-Open an arXiv or OpenReview paper page and download the PDF. A confirmation window will appear with the detected paper title. You can rename the file, keep the original filename, or allow overwriting an existing same-name file.
+Open an arXiv or OpenReview paper page and download the PDF. A confirmation window will appear with the detected paper title, authors, and date when available. You can rename the file, keep the original filename, or allow overwriting an existing same-name file.
 
 ### Rename Old PDFs
 

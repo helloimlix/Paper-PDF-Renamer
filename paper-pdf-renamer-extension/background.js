@@ -4,12 +4,13 @@ const {
   DEFAULT_SETTINGS,
   mergeSettings,
   ensurePdfExtension,
+  renderFilenameTemplate,
   getBaseFilename,
   isLikelyPdf,
   extractArxivId,
   extractOpenReviewId,
-  fetchArxivTitle,
-  fetchOpenReviewTitle
+  fetchArxivMetadata,
+  fetchOpenReviewMetadata
 } = PaperRenamerUtils;
 
 const pendingConfirmations = new Map();
@@ -81,7 +82,7 @@ async function handleDownloadFilename(downloadItem, suggest) {
       return;
     }
 
-    const suggestedFilename = ensurePdfExtension(resolution.title, settings);
+    const suggestedFilename = renderFilenameTemplate(settings.filenameTemplate, resolution.metadata, settings);
     const originalFilename = getBaseFilename(downloadItem.filename) || getBaseFilename(downloadItem.url);
     let finalDecision = {
       action: "rename",
@@ -96,6 +97,7 @@ async function handleDownloadFilename(downloadItem, suggest) {
         originalFilename,
         suggestedFilename,
         title: resolution.title,
+        metadata: resolution.metadata,
         titleSource: resolution.source,
         overwriteDefault: settings.overwriteSameName,
         maxFilenameLength: settings.maxFilenameLength
@@ -151,20 +153,20 @@ async function resolvePaperTitle(downloadItem, settings) {
   if (settings.enabledSites.arxiv) {
     const arxivId = extractArxivId(url) || extractArxivId(filename);
     if (arxivId) {
-      const title = await fetchArxivTitle(arxivId);
-      return title
-        ? { title, source: "arxiv" }
-        : { title: "", source: "arxiv", reason: "arXiv title lookup failed" };
+      const metadata = await fetchArxivMetadata(arxivId);
+      return metadata.title
+        ? { title: metadata.title, metadata, source: "arxiv" }
+        : { title: "", metadata, source: "arxiv", reason: "arXiv title lookup failed" };
     }
   }
 
   if (settings.enabledSites.openreview) {
     const openReviewId = extractOpenReviewId(url) || extractOpenReviewId(filename);
     if (openReviewId) {
-      const title = await fetchOpenReviewTitle(openReviewId);
-      return title
-        ? { title, source: "openreview" }
-        : { title: "", source: "openreview", reason: "OpenReview title lookup failed" };
+      const metadata = await fetchOpenReviewMetadata(openReviewId);
+      return metadata.title
+        ? { title: metadata.title, metadata, source: "openreview" }
+        : { title: "", metadata, source: "openreview", reason: "OpenReview title lookup failed" };
     }
   }
 

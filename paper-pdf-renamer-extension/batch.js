@@ -27,17 +27,21 @@ async function chooseFolder() {
 
     const arxivId = PaperRenamerUtils.extractArxivId(name);
     const openReviewId = PaperRenamerUtils.extractOpenReviewId(name);
+    let metadata = PaperRenamerUtils.normalizePaperMetadata({});
     let title = "";
     let status = "Unrecognized";
     if (arxivId) {
-      title = await PaperRenamerUtils.fetchArxivTitle(arxivId);
+      metadata = await PaperRenamerUtils.fetchArxivMetadata(arxivId);
+      title = metadata.title;
       status = title ? "Ready" : "Lookup failed";
     } else if (openReviewId) {
-      title = await PaperRenamerUtils.fetchOpenReviewTitle(openReviewId);
+      metadata = await PaperRenamerUtils.fetchOpenReviewMetadata(openReviewId);
+      title = metadata.title;
       status = title ? "Ready" : "Lookup failed";
     }
 
-    const newFilename = title ? PaperRenamerUtils.ensurePdfExtension(title) : "";
+    const settings = PaperRenamerUtils.mergeSettings((await chrome.storage.sync.get("settings")).settings);
+    const newFilename = title ? PaperRenamerUtils.renderFilenameTemplate(settings.filenameTemplate, metadata, settings) : "";
     rows.push({
       id: crypto.randomUUID(),
       handle,
