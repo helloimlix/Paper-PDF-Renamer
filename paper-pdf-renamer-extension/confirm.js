@@ -3,6 +3,8 @@ const requestId = params.get("id");
 const statusEl = document.getElementById("status");
 const originalEl = document.getElementById("originalFilename");
 const titleEl = document.getElementById("detectedTitle");
+const authorsEl = document.getElementById("authors");
+const dateEl = document.getElementById("paperDate");
 const finalEl = document.getElementById("finalFilename");
 const overwriteEl = document.getElementById("overwrite");
 const confirmButton = document.getElementById("confirmRename");
@@ -31,8 +33,11 @@ async function init() {
   }
 
   request = response.request;
+  const metadata = request.metadata || {};
   originalEl.value = request.originalFilename || "";
   titleEl.value = request.title || "";
+  authorsEl.value = metadata.authors || "";
+  dateEl.value = metadata.date || metadata.year || "";
   finalEl.value = request.suggestedFilename || "";
   overwriteEl.checked = Boolean(request.overwriteDefault);
   finalEl.focus();
